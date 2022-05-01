@@ -1,0 +1,101 @@
+version: "3.7"
+
+services:
+## Network Gateway
+  vpnbridge:
+    image: ghcr.io/bubuntux/nordlynx
+    networks:
+      egress_network:
+    cap_add:
+      - NET_ADMIN #required
+      - NET_RAW #required in some cases
+      - SYS_MODULE #requiered to install wireguard module
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=2
+    devices:
+      - /dev/net/tun
+    environment:
+      PRIVATE_KEY: "!THIS NEEDS TO BE CONFIGURED!"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 7878:7878 # Radarr
+      - 8989:8989 # Sonarr
+      - 8080:8080 # qbittorrent
+      - 9117:9117 # Jackett
+      - 6767:6767 # Bazarr
+## Trackers
+  jackett:
+    container_name: jackett
+    image: cr.hotio.dev/hotio/jackett
+    network_mode: service:vpnbridge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - ./jackett:/config
+      - /data/media:/data
+      - /data/torrent:/torrent
+## Applications
+  sonarr:
+    container_name: sonarr
+    image: cr.hotio.dev/hotio/sonarr
+    network_mode: service:vpnbridge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - ./sonarr:/config
+      - /data/media:/data
+
+  radarr:
+    container_name: radarr
+    image: cr.hotio.dev/hotio/radarr
+    network_mode: service:vpnbridge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - ./radarr:/config
+      - /data/media:/data
+
+## Subtitles
+  bazarr:
+    container_name: bazarr
+    image: cr.hotio.dev/hotio/bazarr
+    network_mode: service:vpnbridge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - ./bazarr:/config
+      - /data/media:/data
+
+## Download Client
+  qbittorrent:
+    container_name: qbittorrent
+    image: cr.hotio.dev/hotio/qbittorrent
+    network_mode: service:vpnbridge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - ./qbittorrent:/config
+      - /data/media:/data
+      - /data/torrent:/torrent
+
+networks:
+  egress_network:
+    driver: bridge
